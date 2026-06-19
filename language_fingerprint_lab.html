@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Language Fingerprint Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1a1f;
+    --paper: #f0ede4;
+    --dim: #9a9590;
+    --signal: #7fd9a8;
+    --signal-dim: rgba(127,217,168,0.12);
+    --amber: #e8a854;
+    --amber-dim: rgba(232,168,84,0.15);
+    --surface: #22222a;
+    --border: rgba(240,237,228,0.08);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 48px 24px 80px;
+  }
+
+  /* ── Header ── */
+  header {
+    width: 100%;
+    max-width: 780px;
+    margin-bottom: 48px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--signal);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--paper);
+  }
+  h1 em {
+    font-style: normal;
+    color: var(--signal);
+    font-weight: 500;
+  }
+  .subtitle {
+    margin-top: 16px;
+    font-size: 15px;
+    color: var(--dim);
+    line-height: 1.6;
+    max-width: 560px;
+  }
+
+  /* ── Input area ── */
+  .input-wrap {
+    width: 100%;
+    max-width: 780px;
+    position: relative;
+    margin-bottom: 12px;
+  }
+  #textInput {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--paper);
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 1.6;
+    padding: 20px 24px 20px 24px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.2s;
+    min-height: 120px;
+  }
+  #textInput::placeholder { color: var(--dim); }
+  #textInput:focus { border-color: rgba(127,217,168,0.35); }
+
+  .input-meta {
+    width: 100%;
+    max-width: 780px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+  }
+  .char-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--dim);
+  }
+  .clear-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: color 0.15s;
+  }
+  .clear-btn:hover { color: var(--paper); }
+
+  /* ── Winner card ── */
+  .winner-card {
+    width: 100%;
+    max-width: 780px;
+    background: var(--signal-dim);
+    border: 1px solid rgba(127,217,168,0.2);
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 36px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    min-height: 90px;
+    transition: opacity 0.2s;
+  }
+  .winner-card.empty { opacity: 0.3; }
+  .winner-flag {
+    font-size: 36px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .winner-info { flex: 1; }
+  .winner-lang {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--signal);
+    letter-spacing: -0.01em;
+    text-transform: capitalize;
+  }
+  .winner-desc {
+    font-size: 13px;
+    color: var(--dim);
+    margin-top: 4px;
+    font-family: var(--mono);
+  }
+  .winner-confidence {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--signal);
+    flex-shrink: 0;
+  }
+  .confidence-label {
+    font-size: 10px;
+    color: var(--dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    text-align: right;
+    margin-top: 2px;
+  }
+
+  /* ── Section label ── */
+  .section-label {
+    width: 100%;
+    max-width: 780px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── Bars ── */
+  .bars-grid {
+    width: 100%;
+    max-width: 780px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 40px;
+  }
+  .bar-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 52px;
+    align-items: center;
+    gap: 14px;
+  }
+  .bar-lang {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--dim);
+    text-align: right;
+    text-transform: capitalize;
+    transition: color 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bar-row.top .bar-lang { color: var(--paper); }
+  .bar-track {
+    height: 6px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: rgba(127,217,168,0.25);
+    transition: width 0.25s cubic-bezier(0.4,0,0.2,1);
+    width: 0%;
+  }
+  .bar-row.top .bar-fill { background: var(--signal); }
+  .bar-row.second .bar-fill { background: rgba(127,217,168,0.55); }
+  .bar-score {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--dim);
+    text-align: right;
+    transition: color 0.2s;
+  }
+  .bar-row.top .bar-score { color: var(--signal); }
+
+  /* ── N-gram panel ── */
+  .ngram-toggle {
+    width: 100%;
+    max-width: 780px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    padding: 12px 18px;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 0.2s, color 0.2s;
+    margin-bottom: 0;
+  }
+  .ngram-toggle:hover { border-color: rgba(127,217,168,0.25); color: var(--paper); }
+  .ngram-toggle .arrow { transition: transform 0.2s; }
+  .ngram-toggle.open .arrow { transform: rotate(180deg); }
+
+  .ngram-panel {
+    width: 100%;
+    max-width: 780px;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    padding: 20px 20px 24px;
+    display: none;
+  }
+  .ngram-panel.open { display: block; }
+
+  .ngram-explanation {
+    font-size: 13px;
+    color: var(--dim);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    max-width: 580px;
+  }
+  .ngram-explanation strong { color: var(--amber); font-weight: 500; }
+
+  .ngram-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+  }
+  .ngram-col h4 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .ngram-col.winner h4 { color: var(--signal); }
+  .ngram-col.runner h4 { color: var(--amber); }
+  .ngram-col.other h4 { color: var(--dim); }
+
+  .ngram-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+  .ngram-chip {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    white-space: pre;
+  }
+  .ngram-col.winner .ngram-chip {
+    background: var(--signal-dim);
+    color: var(--signal);
+    border: 1px solid rgba(127,217,168,0.2);
+  }
+  .ngram-col.runner .ngram-chip {
+    background: var(--amber-dim);
+    color: var(--amber);
+    border: 1px solid rgba(232,168,84,0.2);
+  }
+  .ngram-col.other .ngram-chip {
+    background: rgba(255,255,255,0.03);
+    color: var(--dim);
+    border: 1px solid var(--border);
+  }
+
+  /* ── How it works strip ── */
+  .how-strip {
+    width: 100%;
+    max-width: 780px;
+    margin-top: 52px;
+    border-top: 1px solid var(--border);
+    padding-top: 36px;
+  }
+  .how-strip h2 {
+    font-size: 13px;
+    font-family: var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 24px;
+  }
+  .how-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 24px;
+  }
+  .how-step { }
+  .step-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--signal);
+    margin-bottom: 8px;
+  }
+  .step-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--paper);
+    margin-bottom: 6px;
+  }
+  .step-body {
+    font-size: 13px;
+    color: var(--dim);
+    line-height: 1.6;
+  }
+  .step-body code {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: rgba(127,217,168,0.1);
+    color: var(--signal);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+
+  /* ── Ambiguity note ── */
+  #ambiguityNote {
+    width: 100%;
+    max-width: 780px;
+    background: var(--amber-dim);
+    border: 1px solid rgba(232,168,84,0.2);
+    border-radius: 6px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: var(--amber);
+    line-height: 1.6;
+    margin-bottom: 24px;
+    display: none;
+  }
+  #ambiguityNote strong { font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">n-gram fingerprint classifier</p>
+  <h1>Language <em>Fingerprint</em> Lab</h1>
+  <p class="subtitle">Type anything and watch n-gram pattern matching identify its language in real-time — the same core technique used by Google Translate, browsers, and language-detection APIs.</p>
+</header>
+
+<div class="input-wrap">
+  <textarea id="textInput" placeholder="Type or paste text in any language…" spellcheck="false" rows="4"></textarea>
+</div>
+<div class="input-meta">
+  <span class="char-count" id="charCount">0 characters · 0 n-grams extracted</span>
+  <button class="clear-btn" onclick="document.getElementById('textInput').value='';onInput()">⌫ clear</button>
+</div>
+
+<div class="winner-card empty" id="winnerCard">
+  <div class="winner-flag" id="winnerFlag">🌐</div>
+  <div class="winner-info">
+    <div class="winner-lang" id="winnerLang">Awaiting input</div>
+    <div class="winner-desc" id="winnerDesc">Start typing to detect language</div>
+  </div>
+  <div>
+    <div class="winner-confidence" id="winnerConf">—</div>
+    <div class="confidence-label">match score</div>
+  </div>
+</div>
+
+<div id="ambiguityNote"></div>
+
+<div class="section-label">All languages · ranked by score</div>
+
+<div class="bars-grid" id="barsGrid"></div>
+
+<button class="ngram-toggle" id="ngramToggle" onclick="toggleNgram()">
+  <span>▸ Show n-gram fingerprint breakdown</span>
+  <span class="arrow">▾</span>
+</button>
+<div class="ngram-panel" id="ngramPanel"></div>
+
+<div class="how-strip">
+  <h2>How it works</h2>
+  <div class="how-steps">
+    <div class="how-step">
+      <div class="step-num">STEP 01</div>
+      <div class="step-title">Extract n-grams</div>
+      <div class="step-body">Your text is sliced into overlapping character windows of size 1–4. "hello" produces <code>h</code>, <code>he</code>, <code>hel</code>, <code>hell</code>, <code>e</code>, <code>el</code>… and so on.</div>
+    </div>
+    <div class="how-step">
+      <div class="step-num">STEP 02</div>
+      <div class="step-title">Rank by frequency</div>
+      <div class="step-body">N-grams are counted and sorted most→least common. This produces a <strong>ranked fingerprint</strong> — not a bag of words, just an ordered frequency list.</div>
+    </div>
+    <div class="how-step">
+      <div class="step-num">STEP 03</div>
+      <div class="step-title">Compare to profiles</div>
+      <div class="step-body">Each language's profile was built the same way, from sample text. We measure how far your ranking is from each profile using <strong>out-of-place distance</strong>.</div>
+    </div>
+    <div class="how-step">
+      <div class="step-num">STEP 04</div>
+      <div class="step-title">Pick the winner</div>
+      <div class="step-body">The language with the <strong>smallest distance</strong> (most similar fingerprint) wins. Google does this with gigabytes of training data; we use a few paragraphs per language.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Embedded language profiles (trained in Python) ───────────────────────
+const PROFILES = {"english":["e","n","t","o","a","i","s","e ","h","r"," t","d","th","l","g","he","s ","c","w"," th","the","in"," a"," the","p","u","m"," w","ng","an","d ","he ","the ","v","y","g ","nd","en","b","y ","re","t ","ing","ng "," b","er","es","on","ing ","n "," o","ve"," e","nd ","k","f"," s","le","ti","nt","or"," an","and"," and","and ","ro","st","lo","to","s o","e w"," to","ow","r "," l"," d","as","hi","ar","ce","ie","ou"," c"," p","ea","at","ch","h ","ver","g t","ce ","e a","s t","es ","ng t","q"," q","qu","k "," f","mp"," i","be","gi","wa","da","ne","ss","il","nc","ac","em","of","f ","wo","ed","ns","ev","me","o "," m","pe","pl"," r","wi","it","we","ee","ay"," qu","e l","e b"," be","gin","re "," wa","hin","ss ","s a","d s","st "," of","of ","ent"," wo","ns ","eve","e t","to ","le ","th "," we","ay ","nt ","g th","hing","s an","nd s"," of "," to ","he w","x","j","z","ui","br","fo","ov","og","ni","no","ut","rk","si","os","va","sp","pa","ci","is"," h","ha","de","bo","un","iv","rs","ry","ca","am","ma","op","ad","di","oo","mo","im","li","te","a "],"spanish":["a","e","o","s","n","r","l","i","s ","d","o ","a ","t","m","c","u","p","e ","os"," l"," e","b","os "," s","n ","en","as","v","el","do"," p"," c","an","í","g","l ","so","er","le"," d","es","lo","nt"," t","el ","do ","h","y","ta","re","ad","y ","la"," a"," lo","los","es ","as "," los","los ","á","f","id"," m","ma","br","pe","ri","in","ci","na","da"," y","st","de","co","un","ti","mo","r ","on"," el"," pe"," en"," y ","la "," de","a e","s l"," el ","z","ó","q"," r","pi","or","rr","ro","sa","io"," h","ha","ab","ía"," q","qu","ue"," v","ie","ra","te","em"," u","ve","li"," f","am","ta "," so","re ","per","en ","io "," qu","que","ue "," la","sta","o l","s d"," un"," a "," co","con"," per"," en "," que","que "," la "," con","rá","áp","zo","ar","ob","pr","nc"," n","no"," o","cu","ur","d ","si","il","va","pa","fi","se","eg","gu","mu","uc","ch","ho","mp","po","ne","iv","rs","to","od","is","us","su","ia","im"," b","ba","av","tr","ol","nd","vi"," rá","ráp","ápi","pid","ido","rro","ro ","n s","a s","sob","obr","bre","l p","so ","o e"," pr"],"french":["e","s","a","r","i","l","t","u","e ","n","s ","d"," l","le","es","m","en","c","t ","o"," a"," d"," le","es ","p","de","v","le ","re","b","é","ar"," s","te","nt"," e"," de","f","g","au","se","me","em","ri","er","ou","men","ent","nt ","e l","les"," le ","q"," r","rd","pa","ss","ie","ce","il","av","qu","é ","st","ve"," t","r ","de ","s l","ien","t l","s a","ent "," les","les "," b","br","un","n ","ut"," p"," c","co","mm","ai","it"," q","ue","ur","et","ns","as","mp","ps","iv","ard"," pa","des","res","sse","mme"," av"," qu","que"," et","et ","ce ","e d","tem","emp","mps","ps ","er ","ave","mmen","ment"," et "," de ","e le","nt l","temp","emps","mps ","h","x","à","ra","d ","eu","u ","om","nc"," i","va","da","tr","lo","sc","té","si","an","im","fi","so","on","nd","ll","ne","rs"," à","à ","is","uc","li"," f","ec","c ","ui","i ","e r"," re"," br","aut","te ","par","rde","ess","en "," au"," co","com","omm","enc","nce"," da","re ","e q"," lo","ité","té ","e s","ns ","ste","ens","s s","se "," so","s d","lle","ver","ers","rs ","s e"," es","est","st ","t a"," ar"," à "," li"],"german":["e","n","i","r","s","t","a","h","d","l","u","e ","en","er","c","ch","t ","m","r ","n "," d","er ","en ","g","w","b","le","un"," w","f","s ","nd","ie","de"," s","an","te","ie ","ne"," a","it"," u"," un","el","au","ng","d ","m "," e","he","ei","st","we","is","ge","und","nd "," we","e d","und ","v","sc"," b","ra"," f","in","am","es","ic"," i"," l","wi","se"," de","sch","eit","it "," und","k","z","o","ll","br","ri","be","fa"," h"," g","ht","il","re","um","ns","ha","h ","as","ve","nt"," v"," m","me","mi","di","der","r s","lle","le ","e b","am ","ang","es ","ich","t u","ten"," le","s w"," wi","ch ","nge","ver","nde","ist","che"," di","die","er s","t un"," die","die ","ü","ä","hn","gt","nf","ab","ni","ts","du","ke","lt","ft","si","da"," z","ur"," r","ec","eh","sa"," sc","chn"," br","rau","ne ","rin","ing","gt ","r d","den","n f"," fa"," am"," an","anf","cht"," du","kel","e i","wei","ite","n l","elt","sen","ens","nsc","cha","r h","ben"," si","sic"," ge","t w","wie"," da","das","as "," en","ent"," is","st ","e a","les","hen","me ","d v"," ve","bri","gen"," mi","mit"],"italian":["e","i","o","a","l","r","t","n","s","e ","o ","p","c","a ","m","g","i "," s","er","u"," c"," p"," l","v","f","on","ne","le","z","d","ro","el","so","pi","ri","en","si","li","ia","to"," t","te","re"," v","ol","ar","ce","al","lt","ra"," i","il","in","n "," n","ie"," e","st"," f","ne ","e s","ra ","e p"," pi","ro ","to "," le","re ","h","b","pe"," m","ve","lo","ta","l ","ig","io","ni","ch"," o","os","zi","ll"," d","de"," g","gl","ti","em","mp","po","co","ut","tt"," a","gg","fi","a v"," so","a i","io ","on ","o c"," ch"," e "," si","ell"," de","del","gli","li ","i s"," te","tem","emp","mpo","po ","le "," co","e l"," del"," tem","temp","empo","mpo ","à","la","vo","ma","sa","pr","an","ci","no","tr","he","sc","it","tà","à ","nz","as","im","me","pa","es","mo","ua","ss","se","or","gi","un","rs","ac","eg","ge","br","na","la ","vol","one"," ve","ce ","alt","ta "," il","il ","o n","era","ien","che","he ","e o","ità","tà ","enz","nzi","zio"," ne","o s"," gl","ti ","son"," pe","per"," mo","mol","olt","i f","ers","rso","e c","utt","tto","ia ","ere","pia","iac"],"portuguese":["s","a","o","e","i","r","o ","m","t","n","p","s ","d","a ","e ","as","u","l"," s","c","v","ta","so"," p"," e","st","as "," a","os","m ","es","á","g"," c"," n"," d","b","ã","sa","om","re"," o","ão","ri","do","is","ss","r ","ão ","o p","sta","do ","h","f","id","ra","po"," m","ma","br","pr","ui"," h","na","de","si","en","ns","pa","nt","ti","pe","er","am","ve","co"," t"," f","te","em","an","om ","m s"," so","o n"," de","de "," es","o e"," e ","e s","os ","ist"," pe"," co","com","ass"," de "," com","ç","í"," r","pi","da","ar","ro","al","ob","gu","ço","no","in","nc","io","av","ia","ad","dã","il","ci","me","á ","mu","it","se","un","or"," u","iv","ir"," l","li","fi","mp","su","ua"," b","el"," a ","a r","da ","sa ","ta ","a s","sob","obr","bre","re "," o ","o c"," pr","so "," no","io ","o h"," na","m d","e e","idã","dão","na ","ast","ens"," do","tas"," mu","mui","uit"," se","e p","tam","am ","e a"," as","ns ","s d","o t"," pa","pas","sso","sti","tir","ir "," fi","es "," te","tem","emp","mpo","po "," su","sua","s f","om s"," sob","sobr","obre","bre ","o pr","io n"],"dutch":["e","n","t","i","a","s","n ","r","e ","en","d","l","o","g","h","s ","en ","m"," d","et","u","t ","er"," h","b","v"," b","an","te","k","de","in"," e","et ","w","ui"," v","r "," i","st","ee","g "," de","de ","te "," de ","p","le"," l","ie","nd","he"," w"," a","is","es","aa","me","in "," he","het","an "," het","het ","c","z","f"," s","br","ng","ve","ho","d ","ni","rs","ti","il","ge","re","ek","we","ch","ag","oe"," m","ke","e b"," br","er "," ho"," in","n h","s e","ers","n d","is "," en"," we"," me","ken"," in "," en ","j","ne","el","ll","ru","pr","ri","gt"," o","on","be","eg","wa","ts","da"," u","va","ns","ra"," z","al","l ","un","m ","ta"," t"," k","am","bo","ij"," f","do","oo","or","lle","rui","e v","ver","r d","e l","ie ","e h","nd ","t b"," be"," er","and","rs ","s d","e i","est"," le"," va","van","ens","s v","gen","n z"," al","hoe","oe "," is","sta","taa","aan","es ","n k","men","aag","ag "," bo","eke","n f"," do","doo","oor","or ","met","t w","wee","e br","r de","in h","n he","t be","ers ","an d","s en","e in","n de"," van","gen ","en z"," hoe","hoe "," is ","staa","taan"],"swedish":["n","e","r","a","t","i","s","l","m","d","r ","g","a ","er","u","ä","o","en","v","h","n "," t","b","k","t ","er ","en ","p","c","na","un","ve","ng"," m","de"," b"," h","ti","d ","om","il","ö","å","at"," i","nn","s ","et","in","ge","än"," o"," u","m ","den","ver","om "," ti","den ","y","f"," d"," s","br","rä"," l","ta"," f","an","ns","g "," a","ke","oc","ch","h ","ni","rs"," v","id","tr","ck","sk","ll","ga","me"," de","na ","ta ","et ","ing","ker","r o"," oc","och","ch "," un","a t","ker ","er o"," och","och ","ru","ar"," ö","öv","hu","nd","i ","el","se","fa"," ä","ty","st","iv","su","um","ms","he","ka","mä","lä","dr","ur","ko","is","tt"," p","på","å ","ri","ed","mi","äd","re"," g","a b"," br","run","n h","ar "," öv","öve"," hu","und"," i "," fa","ann","t i","nge","gen","ng ","at ","än ","n m","h t"," ty","uni","niv","ive","ers","rsu","sum","ums","ms ","trä","nsk","ska","män"," lä","m t","til","ill","nga","ga ","r t","cke"," på","på ","bri"," me","med","ed ","mil","r g"," tr"," den"," öve","över","ver ","et i","r oc","ch t"," uni","univ","nive","iver","vers","ersu"],"polish":["i","a","e","z","o","s","n","w","d","k","c","y","ą","p","j","t","r","m"," p","l","na","a "," w","b","u","ć","i "," n","ie","ć ","ze","ni"," i","za","st"," d","ą ","g","sz","zy","y ","is","rz","e ","em","cz","o "," c"," o","od"," z","wi","dz"," na","ś","ę"," s"," b"," l","pr","ak","je","d ","en","m ","po"," j","mn","og","ko","os","da","ta","ia","si","ać","z "," pr","prz","rze","na "," po","nie"," i ","ać "," prz","ł","h","ki","br","ow","wy","li","s ","es","ka","ku","ad","le","oc","zą","tk","u ","ło","in","ne","go","ja","k ","ci","oś","ść","w ","ro","ej","j "," k","aw","as","aj","ją","ch","ws","at","tn","el","zi","ną","szy","ki "," br","nad","ad ","eni","em ","poc","u n"," ni","ło "," ja","jak","ak "," ci","iem","emn","ość","ść ","i c"," w "," og","a z"," za","zas","wia","iaj","odz"," ws","wsz"," wi","wie"," cz"," z ","dzi","ną ","ą w","z d","prze"," nad","nad "," poc"," jak","jak ","ość ","na z"," wsz"," wie","ó","ż","f","yb","bk","rą","ąz","zo","sk","uj","iw","ym","ps","se","ąt","by","ył","ic","c ","nn","eg","no","gr","om"],"russian":["о","е","и","н","т","с","в","р","а","м","л","ы","я","к","д","г","ь","п"," с"," в","ч","я "," п","е ","о ","и ","у","ре"," к"," л","но","м ","ь ","б","ю","ё","ер","пр","ни"," н","го","ро","ом","ем"," д","во","ть","од","ть ","з","й","ст","ая","ко","ва","а ","ги","ет","ле","ен","на"," т","те","мн","от","ы "," и","ны"," о","ог","й ","се","ов","ая ","ере","мно"," и "," пр","ш","х","щ"," б","бы","тр","ра","ри","ич","не","ев","ли","ис","са","ив","т "," ч","че","ую","ак","в ","ач","ча","ал","ло","ег","ой","то","ос","см","мо","до","ол","вр","мя","мы","хо","де","вс","ат","лю","ди","ят","ит","ль","с ","по","дн","им"," бы"," ко","са ","т ч","лен","ени"," в "," на","нач","ача","чал","ло ","его","ром","ы и","ной","ой ","й п","смо"," до"," вр","вре","рем","емя","мя ","и о"," о ","о п","про"," вс","ом ","ать"," лю","ово","я с"," с "," се"," по","одн","год","им "," нач","нача","ачал","ы и ","ной "," вре","врем","ремя","емя ","и о ","о пр"," про","ать ","я с ","ж","ф","ыс","ор","чн","пе","еп","ры","ыг","ае","ез","з ","ву","ю ","со","об","ба","ку"],"ukrainian":["о","и","е","і","в","р","а","н","т","с","д","у","к","ч","л","п"," п","м","і ","г","у ","о ","и ","я","з","а ","ро","б","ь"," к"," л","по","ні","ти"," в"," д","од"," по","ви","ва","ер"," ч","ча","ат"," і","пр","ит"," пр","є","й","ю","ко","ри","не","ли","я ","ре","че","з "," н","е ","ог","го","м "," т","те"," у","й ","ос","ов","ь ","ди","ере","ого"," і ","у в","ні ","про","і п","ти "," про","ш","ц","ж","х","ор","ич","ев","ис","си","ес","бу","ує","є ","ез","ни","ив","ву"," с","ба","ку","на","оч"," б","ло","кр","рі","ем","ен","до","ги","ас","с "," р","ув","ал","се","ві","іт","лю","де","ть"," з","дн"," ко","ева","ва ","ує ","з л","ку ","у н","на ","поч","оча","ло "," кр","крі"," те","и і"," у ","і д"," до"," ча","час","ас "," ро","ува","ро ","віт","ати"," лю","ть ","ити","оди"," з ","дні","год","ева ","ку н"," поч","поча"," крі","и і "," у в","ні д","і до"," час","час ","про "," і п","і пр","ати ","дні ","огод","ф","щ"," ш","шв","ид","дк","ка","чн","иц","ця","пе","ст","тр","иб","лі","ін","со","об","ак","тк","ул","іч","чо","ім","мр","ря"],"greek":["α","ο","ν","τ","ι","π","ρ","ε","η","κ","λ","σ","ν "," τ","ι ","α ","ή","έ","ά","υ","ς"," σ","ς ","ύ","β","η ","κα"," α"," π","το","αι","δ","μ"," κ","πο","ου"," κα","στ","τη","τα","αν","και","αι "," και","γ","ω","ό","χ","ί","ην","αρ","ια","να"," το","την","ην ","την ","και ","ού","άν","απ","λο","ο ","ή "," δ","πα","δι","ντ","οι","νο","υν"," ν"," απ"," στ","στη","του","ουν","υν "," να","να "," στη","στην"," του","ουν "," να ","ώ","θ"," γ","λε","επ","ει","ό ","ον","μπ","πέ","έλ","σκ","κύ","ρχ","πή","ήρ","ε ","οτ"," ά","λλ","κο","ωπ","ασ","ση","υ ","τή","ήμ","ατ","ος"," ο"," ε","νε","ες","ρω","τι","ύν","ρό","λα","ολ","βά","αβ"," β","βλ","ι π","ν τ"," σκ","λο ","ν α","ε τ","τα ","λλο","παρ","ι κ","αντ","ση ","η τ","ου "," δι","δια","στή","τήμ","ατο","τος","ος ","ς ο"," οι","οι ","ι ε","ες ","ούν","ται","ς κ","πολ"," τα","ς τ","ην α","ι κα","ση τ","η το","του "," δια","στήμ","τος ","ς οι","ς κα","φ","ξ","ζ"," η","γρ","ρή","ήγ","γο","ορ","ρη","αφ","φέ","έ ","αλ","ύ ","πη","ηδ","δά","άε","πά","νω","ω ","πό","τε","εμ","λη","ύλ","χή","δε","εν"],"turkish":["a","e","i","n","r","l","k","n ","ı","u","s","m","v","t","b","y","o","ar","r ","z","d"," b","h","ş","en","in"," h","i ","la","an","a ","g","ç"," k","ve","er"," a"," v","lar","ğ","f","ı ","il","nd","ni","e ","es","bi","ir","ey"," e","ar "," bi","zl","ka","ta","za","ın","un","da","ra","k "," s","se","si","ok","am","rı","ma","yi","va"," o","me","le","ha","in ","en ","r b","eni"," ve","ve ","bir","arı","i v","eyi","an "," ha"," ve "," bir","ları","ö","p","ü","lı","re","ng"," t","ti","ki","te","em","l ","kö","ba","aş","şl"," u","uz","ay","yı"," g","ge","ş ","oş","uğ","ğu","nl","iz","li","kt"," ş","şe","yo","u ","m "," z","ev","as","sı","ol","ld","du","iy"," i","fi","af"," ka","ver","ren","i t"," kö","n a"," ba","baş","ta "," uz","ayı","ın ","n g"," ge","uğu","ğun","nda","ara"," se","izl","ir ","r ş"," şe","şey","rı "," za","zam","ama","man","r e","nin","n k","e h","er ","ası"," va","var"," ol","old","ldu","mey","yi ","haf","esi","n h"," es","lar ","ar b"," baş","n ge","uğun","bir ","r şe"," şey","arı "," zam","zama","aman","enin","i ve","ve h"," var","var "," old"],"arabic":["ا","ل","ال","ي"," ا"," ال","و","ف","م","ن","ع","ب","س","ك","ء","ت","ر","ق","ة","ش","ة ","م ","ه","أ","ب ","ع "," ف","لك","ن ","ء ","اء","الك"," الك","د","ط","لب","ي "," ي","ل ","في","لا"," و"," م","ج","وق"," ل","ت "," ع","يف","ف "," ن","لأ","ب ا","ي ا"," في","في ","اء ","يف ","ة ا","الأ","ب ال","ي ال"," في ","ة ال"," الأ","ث","ى","ص","ض","عل","كل","سو","دا","اي","ية","لم","نا"," ش","شي","يء","ى ","ام","لف","را","شا","اس","ضا","من","لو","ر ","س ","وم","مع","ات","لط","لب ","الب","اية","ية "," شي","شيء","يء ","ى ا","لام","ام ","م و","ضاء","ل ا"," من","الو","ن ا"," مع","مع ","لات","لب ا"," الب","في ا","اية "," شيء","شيء ","ى ال","لام ","ام و","ضاء ","ل ال"," الو","ن ال"," مع ","ز","ظ","غ","ذ","إ","ح","ئ","خ","لث","ثع","بن","ني","لس","سر","ري","يع","يق","قف","فز","ز ","فو","ق ","كس","ول","بد","يك","كن"," ه","هن","اك","ك "," س","وى","لظ","ظل","وا","لص","صم","مت","فر","اغ","غ ","لش","سع","لل","فض"," ت","تس","سا","ءل","لع","ما","نذ","ذ ","فت","تر","رة"," ط","طو","وي","يل","لة","عن"," أ","أص","صل","كو","ون","وك","كي","نش","شأ"],"hebrew":["ה","י","ו","ל","ם"," ה","ם ","ב","ע","ר","מ","ש","ד","ק"," מ","ים","ים ","ח","ת","נ","ל "," ב","צ","א","ום","ה "," ל","ום ","ן","ז","פ","הי","ר ","הע","ן ","כ","ס","על","חו","יר","מד","עצ","לה","א ","וש"," ו"," ז"," ע","רו","ות","ת ","י ","על ","ל ה","יר "," הע","העצ"," הי","ם ל"," העצ","ים ל","ג","ט","וע","הח","ג ","הכ","כל","לב","ב ","בת","יה","בר","ד ","רי","יק"," ש","ני","זמ","מן"," ר","רב","קו","די"," ק","יו"," נ","הנ","בס","בי","עם","שב"," הח","ם ה","ר מ"," מד"," הכ","הכל","לה ","ל מ","נים"," זמ","זמן","מן ","ות ","ם ו","די ","יום","ם נ","ת ב"," בס"," עם","עם ","על ה","ל הח","ום ה"," הכל","נים "," זמן","זמן ","יום "," עם ","ך","הש","שו","המ","מה","דל","לג","מע","צל","לן","תח","חי","יל","לא"," ד","דב","מל","בד"," ח","שך","ך ","שק","קט","ט ","ק ","צו","של","חל","לל","דע","ענ"," ת","תה","הו","ו ","זה","מק","ור","וכ","כי","יצ","צד","בא","לי","יד","קי","הר","בה"," א","אנ","נש","שי","נה","לק","קר","וא"," ס","ספ","פר","לצ","צפ","פו","סר","רט","טי","ול","עב","מש","שפ","פח","תי","הם","סו","ופ","פי","בו","ע ","מז"],"hindi":["त","क","र","स"," क","म","न","त "," स","ह","र ","ल","प","ब","क ","म ","अ","व","स ","ह "," म"," अ"," क "," म ","य"," ब","न ","आ","द","श","औ"," ल","तत"," ह"," औ","और","ब ","य "," प"," ह ","त म","म अ"," और","और ","र स","त म "," म अ"," और ","और स","ज","ड","छ","थ","लम","मड","ड "," आ","कत","पर"," श"," व","कर","व ","कछ","छ ","थ ","सम","मय","बर","रह","पत","हत","मड "," कत","तत ","र क","त ह"," कछ","कछ "," सम","समय","मय "," स ","स ब"," बर","हत ","न प","त ह "," कछ "," समय","समय ","स बर","भ","ऊ","ष","ध","ट","ञ","उ","इ","च","ग","ढ","फ","ख"," त","तज","ज "," भ","भर","आल","लस"," ऊ","ऊप","कद","दत","शर","रआ","आत","अत","तर","रक","कष","ष ","वश","शल","ल ","शन","नय","यत","अध","धक","सन","नन","नट","ट ","अल","लव"," न","नह"," थ","वज","जञ","ञन","नक","लब","हम"," उ","उत","तप","सब","कस","अस","सत","तव","आय"," इ","इस","सच","चत"," र","बह","लग","ग ","तब","पढ","ढन"," फ","फल"," द","दख","खन","सप","तह","अप","पन","रव","वर","सथ","बत","तन","पस","सद","द ","रत"," तज","तज ","ज भ"," भर","भर ","र ल"," लम","लमड","ड आ"," आल","आलस","लस ","स क","कतत","त क"],"japanese":["の","を","い","に","な","か","た","る","は","と","が","間","す","て","り","者","え","宇","宙","し","っ","よ","う","々","ん","で","宇宙","宙の","った","よう","うに","間を","いる","かな","宇宙の","ように","速","茶","色","キ","ツ","ネ","怠","け","犬","飛","び","越","初","め","広","大","虚","無","中","暗","闇","静","寂","科","学","ち","長","起","源","べ","ど","存","在","考","き","多","く","人","本","読","だ","映","画","見","週","末","家","族","時","過","ご","こ","楽","今","日","天","気","快","適","木","穏","や","風","吹"," 速","速い","い茶","茶色","色の","のキ","キツ","ツネ","ネが","が怠","怠け","け者","者の","の犬","犬を","を飛","飛び","び越","越え","える","る初","初め","めに","には","は宇","の広","広大","大な","な虚","虚無","無の","の中","中に","に暗","暗闇","闇と","と静","静寂","寂し","しか","か "," な","なか","かっ","た科","科学","学者","者た","たち","ちは","は長","長い","い間","間宇","の起","起源","源と","とす","すべ","べて","てが","がど","どの","のよ","に存","存在","在す","する","るよ","にな","なっ","たの","のか","かを","を "," 考","考え","えて","てき","きた","た多","多く","くの","の人","人々","々は","は本","本を","を読","読ん","んだ","だり","り映","映画","画を","を見","見た","たり","り週","週末"],"chinese":["的","在","人","天","了","起","空","和","家","们","以","一","着","敏","捷","棕","色","狐","狸","跳","过","懒","惰","狗","初","太","浩","瀚","虚","中","除","黑","暗","寂","静","之","外","什","么","都","没","有","科","学","长","期","来","直","思","考","宇","宙","源","及","切","是","如","何","开","始","存","许","多","喜","欢","读","书","看","电","影","并","周","末","与","共","度","时","光","今","气","相","当","宜","树","林","间","吹","轻","柔","微","风","技","术","继","续","快","速","发","展","改","变","我","每","生","活","工","作","方","式"," 敏","敏捷","捷的","的棕","棕色","色狐","狐狸","狸跳","跳过","过了","了懒","懒惰","惰的","的狗","狗起","起初","初太","太空","空浩","浩瀚","瀚的","的虚","虚空","空中","中除","除了","了黑","黑暗","暗和","和寂","寂静","静之","之外","外什","什么","么都","都没","没有","有 "," 科","科学","学家","家们","们长","长期","期以","以来","来一","一直","直在","在思","思考","考宇","宇宙","宙的","的起","起源","源以","以及","及一","一切","切是","是如","如何","何开","开始","始存","存在","在的","的许","许多","多人","人喜","喜欢","欢读","读书","书看","看电","电影","影 "," 并","并在","在周","周末","末与","与家","家人","人共","共度","度时","时光"],"korean":["는","다","에","다 ","과","이","는 ","우","게","어","주","것","을","고","에 ","과 ","이 ","을 ","고 ","른","가","를","의","대","한","아","무","었","들","은","오","하","해","사","람","보","른 ","를 ","에는"," 우","우주","주의","의 "," 어","은 "," 오"," 것","게 "," 사"," 보","에는 "," 우주","우주의","주의 "," 우주의","우주의 ","빠","갈","색","여","으","개","뛰","넘","처","음","광","공","허","속","둠","침","묵","외","도","없","학","자","랫","동","안","기","원","모","든","떻","존","재","되","지","궁","금","했","많","책","읽","영","화","말","족","시","간","내","좋","늘","날","씨","꽤","쾌","적","며","나","로","부","드","러","운","바","불","있"," 빠","빠른"," 갈","갈색","색 "," 여","여우","우가","가 "," 게","게으","으른"," 개","개를"," 뛰","뛰어","어넘","넘는","는다"," 처","처음","음에"," 광","광대","대한","한 "," 공","공허","허 "," 속","속에","어둠","둠과"," 침","침묵","묵 "," 외","외에"," 아","아무","무것","것도","도 "," 없","없었","었다"," 과","과학","학자","자들","들은","오랫","랫동","동안","안 "," 기","기원","원과"," 모","모든","든 ","것이","어떻","떻게"," 존","존재","재하","하게"," 되","되었","었는","는지","지에"," 대","대해","해 "," 궁","궁금","금해","해했"],"vietnamese":["n","h","c","i","g","t"," t"," n","nh","o","a","ng","u","à"," c","v","i "," v","h ","g ","c ","ng ","n ","a ","th"," nh"," th","đ","k","m","u "," đ"," k","kh","nh "," kh","á","l","b","o "," l"," b"," g","và","à "," và","ả","ó","ư","ờ","ì","ố","r","ọ","on","an","ch","ời","ác","m ","tr","u n","ời "," ng","và "," tr","i t"," và ","â","ế","ầ","ô","s","ủ","ũ","ụ","ã","ắ","ề","co","cá","âu","hả","ó ","ườ","ba","hô","ôn","ối"," s","im","ho","củ","ủa","vũ","ũ ","rụ","ụ ","hà"," h","ọc","đã","ã ","ắc"," m","ìn","àn","ào","hi","gi","ia"," co","con","on ","n c"," cá","o n","âu ","h n","nhả","a c","ười","i b","g b"," ba","an ","khô","hôn","ông","ác ","c n","g t","ối ","im ","g k","kho"," củ","của","ủa ","a v"," vũ","vũ ","ũ t","trụ","rụ ","ọc "," đã","đã ","ắc ","ình","h t","ành","ào ","ch ","i g"," gi","gia"," con","con ","on c","u nh","nh n","h nh"," nhả","ười ","ng b","g ba"," khô","khôn","hông","ông ","ác n","ng t","ng k","g kh"," kho"," của","của ","ủa v","a vũ"," vũ ","vũ t","ũ tr"," trụ","trụ "," đã ","i th","ình ","nh t","h th","ành ","i gi"," gia","y","q","ự","ặ","ừ","ồ","ứ"],"indonesian":["a","n","e","an","m","i","l","a ","k","g","n ","u","s","t","p","ng","an ","d"," a","la","en","r","y","pa"," m","me","b","h","o","ya","i ","da","se"," d","ang","c","g ","ny"," s","ng "," me"," se","el","in","al","ga","ta","nya","ang ","ba"," c","at","ak"," k","ke","am","ua","em"," b","ka"," ke","any","anya","w","ep","ma","as"," p","ad","wa"," t","ap","ai","ha","m ","ar","mu","na","i a","ala","ada","da ","ya ","apa","ela","n k","n d"," da","dan","nga","gan","lam","sem","a b","tan","men","eng","kan","ada ","nya ","n ke","an d"," dan","dan ","ngan","gan "," sem"," men","kan ","ah","h ","t "," y","mp","ti","s ","k ","aa","eh","ni","di"," l","lu","es","st","ra"," i","il","lm","te","er","nt","l ","ul","ac","ca","uk","ku","u ","on","is","de","ek","cu","po","oi","ah ","at "," ya","yan","pat","mpa"," an","ing","g m","as "," pa","a a","a t","ak "," ad","paa","a s","lai","in ","keh"," di","di ","lua"," al","am ","m s","eme","mes","est","sta","ta ","ilm"," te","a d"," ba","a m","ena","nan","aca","ca ","uku"," de","den","eka"," cu","sep","epo","poi"," yan","yang","ng m","da a","ya t"," ada"],"thai":["า","น","อ","ว","ก","ง","ม","ส","ล","ร","ด","ย","ไ","เ","วา","ข","ค","ห","จ","ะ","ใ","แ","ท","บ","าม","แล","าง","ต","สน","งไ","ใน","มม","ไร","คว","ละ","ลา","ยา","าน","อย","ควา","วาม","และ","ความ","ำ","ป","ศ","ช","นข","อก","กส","าล","อง","วก","กร","ดข","อน","นแ","มอ","าก","งเ","นก","กว","าศ","สง","งส","มา","รว","ได","ดอ","อบ","นห","หน","นง","บค","คร","ดส","สนข","มมอ","วาง","นกว","ไดอ","ดอย","อยา","ยาง","างไ","งไร","หนง","บคร","ไดอย","ดอยา","อยาง","ยางไ","างไร","โ","ญ"," ส","ขจ","จง","งจ","จอ","นำ","ำต","ตา","ลท","ทว","วอ","ไว","ระ","ะโ","โด","ดด","ขา","มส","ขท","ทข","ขเ","เก","กย","ยจ","จ "," ใ","นต","ตอ","แร","รก","กไ","ไม","อะ","ะไ","รเ","เล","ลย","ยน","นอ","กจ","จา","ก "," ค","มด","ดแ","ะค","มเ","เง","งย","ยบ","บใ","นค","มว","เป","ปล","าอ","งใ","ให","หญ","ญข","ขอ","งอ","อว","กา","ศ "," น","วท","ทย","ศา","าส","สต","ตร","รส","สย","ยม","นา","ลว","วว","า "," จ","จก","ลก","กำ","ำเ","เน","นด","ขน","นม","าไ","รแ","ะท","ทก","เร","รม","ยไ","ร "," ห","หล","าย","ยค","คน","นช","ชอ","บอ","อา"]};
+
+const PROFILE_SIZE = 200;
+const NGRAM_SIZES = [1, 2, 3, 4];
+
+const LANG_META = {
+  english:    { flag: '🇬🇧', family: 'Germanic · Latin script' },
+  spanish:    { flag: '🇪🇸', family: 'Romance · Latin script' },
+  french:     { flag: '🇫🇷', family: 'Romance · Latin script' },
+  german:     { flag: '🇩🇪', family: 'Germanic · Latin script' },
+  italian:    { flag: '🇮🇹', family: 'Romance · Latin script' },
+  portuguese: { flag: '🇧🇷', family: 'Romance · Latin script' },
+  dutch:      { flag: '🇳🇱', family: 'Germanic · Latin script' },
+  swedish:    { flag: '🇸🇪', family: 'Germanic · Latin script' },
+  polish:     { flag: '🇵🇱', family: 'Slavic · Latin script' },
+  russian:    { flag: '🇷🇺', family: 'Slavic · Cyrillic script' },
+  ukrainian:  { flag: '🇺🇦', family: 'Slavic · Cyrillic script' },
+  greek:      { flag: '🇬🇷', family: 'Hellenic · Greek script' },
+  turkish:    { flag: '🇹🇷', family: 'Turkic · Latin script' },
+  arabic:     { flag: '🇸🇦', family: 'Semitic · Arabic script' },
+  hebrew:     { flag: '🇮🇱', family: 'Semitic · Hebrew script' },
+  hindi:      { flag: '🇮🇳', family: 'Indo-Aryan · Devanagari' },
+  japanese:   { flag: '🇯🇵', family: 'Japonic · mixed script' },
+  chinese:    { flag: '🇨🇳', family: 'Sino-Tibetan · Hanzi' },
+  korean:     { flag: '🇰🇷', family: 'Koreanic · Hangul script' },
+  vietnamese: { flag: '🇻🇳', family: 'Austroasiatic · Latin + diacritics' },
+  indonesian: { flag: '🇮🇩', family: 'Austronesian · Latin script' },
+  thai:       { flag: '🇹🇭', family: 'Tai-Kadai · Thai script' },
+};
+
+// ─── Core algorithm (mirrors detector.py exactly) ─────────────────────────
+
+function extractNgrams(text) {
+  // Normalize exactly as in Python: lowercase, collapse whitespace, strip punctuation
+  text = text.toLowerCase();
+  text = text.replace(/\s+/g, ' ');
+  // Strip punctuation but keep unicode letters/digits/spaces
+  text = text.replace(/[^\p{L}\p{N}\s]/gu, '');
+
+  const counts = new Map();
+  for (const n of NGRAM_SIZES) {
+    for (let i = 0; i <= text.length - n; i++) {
+      const gram = text.slice(i, i + n);
+      if (gram.trim()) {  // skip whitespace-only n-grams
+        counts.set(gram, (counts.get(gram) || 0) + 1);
+      }
+    }
+  }
+  return counts;
+}
+
+function buildProfile(text) {
+  const counts = extractNgrams(text);
+  // Sort by count descending, take top PROFILE_SIZE
+  return [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, PROFILE_SIZE)
+    .map(([gram]) => gram);
+}
+
+function profileDistance(sampleRanked, langRanked) {
+  // Build lookup: ngram → its rank in the language profile
+  const lookup = new Map(langRanked.map((gram, rank) => [gram, rank]));
+  let total = 0;
+  for (let sampleRank = 0; sampleRank < sampleRanked.length; sampleRank++) {
+    const gram = sampleRanked[sampleRank];
+    const langRank = lookup.has(gram) ? lookup.get(gram) : PROFILE_SIZE;
+    total += Math.abs(sampleRank - langRank);
+  }
+  return total;
+}
+
+function detect(text) {
+  if (!text.trim()) return null;
+  const sampleRanked = buildProfile(text);
+  if (sampleRanked.length === 0) return null;
+
+  const rawDistances = {};
+  for (const [lang, profile] of Object.entries(PROFILES)) {
+    rawDistances[lang] = profileDistance(sampleRanked, profile);
+  }
+
+  const maxDist = Math.max(...Object.values(rawDistances)) || 1;
+  const scores = {};
+  for (const [lang, dist] of Object.entries(rawDistances)) {
+    scores[lang] = 100 * (1 - dist / maxDist);
+  }
+
+  const ranked = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+  return { ranked, sampleRanked, ngramCount: sampleRanked.length };
+}
+
+// ─── UI ───────────────────────────────────────────────────────────────────
+
+let lastResult = null;
+
+function onInput() {
+  const text = document.getElementById('textInput').value;
+  const charCount = document.getElementById('charCount');
+
+  if (!text.trim()) {
+    charCount.textContent = '0 characters · 0 n-grams extracted';
+    resetUI();
+    return;
+  }
+
+  const result = detect(text);
+  lastResult = result;
+
+  charCount.textContent = `${text.length} characters · ${result.ngramCount} unique n-grams extracted`;
+  renderResults(result, text);
+}
+
+function resetUI() {
+  const card = document.getElementById('winnerCard');
+  card.classList.add('empty');
+  document.getElementById('winnerFlag').textContent = '🌐';
+  document.getElementById('winnerLang').textContent = 'Awaiting input';
+  document.getElementById('winnerDesc').textContent = 'Start typing to detect language';
+  document.getElementById('winnerConf').textContent = '—';
+  document.getElementById('barsGrid').innerHTML = '';
+  document.getElementById('ambiguityNote').style.display = 'none';
+  lastResult = null;
+}
+
+function renderResults(result, text) {
+  const { ranked } = result;
+  const [topLang, topScore] = ranked[0];
+  const [secondLang, secondScore] = ranked[1];
+  const meta = LANG_META[topLang] || { flag: '🌐', family: '' };
+
+  // Winner card
+  const card = document.getElementById('winnerCard');
+  card.classList.remove('empty');
+  document.getElementById('winnerFlag').textContent = meta.flag;
+  document.getElementById('winnerLang').textContent = topLang.charAt(0).toUpperCase() + topLang.slice(1);
+  document.getElementById('winnerDesc').textContent = meta.family;
+  document.getElementById('winnerConf').textContent = topScore.toFixed(1);
+
+  // Ambiguity warning — if top two languages are very close
+  const gap = topScore - secondScore;
+  const ambig = document.getElementById('ambiguityNote');
+  if (gap < 5 && text.trim().length < 40) {
+    const secMeta = LANG_META[secondLang] || { flag: '' };
+    ambig.innerHTML = `<strong>Low confidence:</strong> ${topLang} and ${secMeta.flag} ${secondLang} have similar fingerprints (gap: ${gap.toFixed(1)} pts). Add more text for a clearer result — this is a known limitation of n-gram detection on short inputs.`;
+    ambig.style.display = 'block';
+  } else {
+    ambig.style.display = 'none';
+  }
+
+  // Bars
+  const grid = document.getElementById('barsGrid');
+  grid.innerHTML = '';
+  const maxScore = ranked[0][1] || 1;
+  ranked.forEach(([lang, score], i) => {
+    const m = LANG_META[lang] || { flag: '' };
+    const cls = i === 0 ? 'top' : i === 1 ? 'second' : '';
+    const row = document.createElement('div');
+    row.className = `bar-row ${cls}`;
+    row.innerHTML = `
+      <div class="bar-lang">${m.flag} ${lang}</div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(score/maxScore*100).toFixed(1)}%"></div></div>
+      <div class="bar-score">${score.toFixed(1)}</div>
+    `;
+    grid.appendChild(row);
+  });
+
+  // Re-render ngram panel if open
+  if (document.getElementById('ngramPanel').classList.contains('open')) {
+    renderNgramPanel(result);
+  }
+}
+
+function renderNgramPanel(result) {
+  if (!result) return;
+  const { ranked, sampleRanked } = result;
+  const panel = document.getElementById('ngramPanel');
+  const top3 = ranked.slice(0, 3);
+
+  // For each top language, find which of the sample's top n-grams appear in its profile
+  const html = [];
+  html.push(`<p class="ngram-explanation">
+    These are the top n-grams extracted from your text, compared against the profiles of the top-scoring languages.
+    <strong>Highlighted = this n-gram also appears in that language's training profile.</strong>
+    The more overlap, the lower the distance score.
+  </p>`);
+  html.push(`<div class="ngram-cols">`);
+
+  const topNgrams = sampleRanked.slice(0, 30);
+
+  top3.forEach(([lang, score], idx) => {
+    const profileSet = new Set(PROFILES[lang] || []);
+    const cls = idx === 0 ? 'winner' : idx === 1 ? 'runner' : 'other';
+    const m = LANG_META[lang] || { flag: '' };
+    html.push(`<div class="ngram-col ${cls}">`);
+    html.push(`<h4>${m.flag} ${lang} · ${score.toFixed(1)}</h4>`);
+    html.push(`<div class="ngram-chips">`);
+    topNgrams.forEach(gram => {
+      const inProfile = profileSet.has(gram);
+      const displayGram = gram === ' ' ? '·' : gram;
+      // Only show chips that are in this language's profile for non-winner cols to avoid clutter
+      if (inProfile || idx === 0) {
+        html.push(`<span class="ngram-chip" style="${!inProfile ? 'opacity:0.25' : ''}" title="${inProfile ? 'in profile' : 'not in profile'}">${displayGram}</span>`);
+      }
+    });
+    html.push(`</div></div>`);
+  });
+
+  html.push(`</div>`);
+  panel.innerHTML = html.join('');
+}
+
+function toggleNgram() {
+  const btn = document.getElementById('ngramToggle');
+  const panel = document.getElementById('ngramPanel');
+  const isOpen = panel.classList.toggle('open');
+  btn.classList.toggle('open', isOpen);
+  btn.querySelector('span').textContent = isOpen
+    ? '▾ Hide n-gram fingerprint breakdown'
+    : '▸ Show n-gram fingerprint breakdown';
+  if (isOpen && lastResult) renderNgramPanel(lastResult);
+}
+
+// ─── Wire up input ─────────────────────────────────────────────────────────
+document.getElementById('textInput').addEventListener('input', onInput);
+</script>
+</body>
+</html>
